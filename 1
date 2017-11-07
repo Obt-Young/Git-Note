@@ -1,0 +1,16 @@
+1.安装git
+yum install git
+
+2.创建远程git仓库
+github或者其他仓库管理网站
+
+3.在远程git仓库下生成一个秘钥对
+ssh-keygen -t rsa -C "邮箱地址" -b 4096
+秘钥对会在~/.ssh目录下
+
+4.把本地的公钥（id_rsa.pub）内容复制到服务端的钥匙链中
+
+5.创建一个目录用于与远程仓库某个项目建立关系
+  mkdir kernel-with-tipc
+  cd kernel-with-tipc
+  git init
