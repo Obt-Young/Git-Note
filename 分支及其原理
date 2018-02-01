@@ -1,0 +1,66 @@
+git branch xxx ： 创建分支（指针）xxx，指向当前最新的commit点
+git log --oneline --decorate  ：  查看所有分支（指针）指向的commit点
+
+HEAD分支（指针）：指向当前分支（指针）的commit点，即当前分支（指针）的  “别名” ！
+
+使用git checkout进行分支切换时，会发生两件事：1.把HEAD分支（指针）指向当前分支（指针）；
+                                           2.把当前工作目录切换到相应分支（指针）所代表的快照内容；
+                                           (这很重要，每次checkout都会导致当前工作目录发生变化)
+                                           
+git checkout -b xxx ： 创建分支（指针）xxx，同时切换到xxx上去
+  （以上等同于：git branch xxx ； git checkout xxx）
+  
+
+git merge yyy ： 把当前分支合并 “到”  yyy分支上，加入当前分支是xxx，那么就相当于给xxx赋值为yyy，xxx=yyy
+            注：分支的合并，必须建立在commit的可访问前提下。不应当出现分支合并后，无法访问之前可访问的commit
+
+git branch -d xxx ： 删除xxx分支（指针）
+
+git branch --no-merged ： 罗列针对当前分支而言，所有还未合入的分支
+git branch --merged    ： 罗列针对当前分支而言，已经合入了的分支
+
+尝试删除一个尚未被merge到其他分支的分支时，会报警，因为当前分支没被merge到别的分支，所以他的一些信息可能会丢失。如果确实想删除
+则用git branch -D xxx
+
+
+远程引用是对远程仓库的引用（指针），包括分支和标签等。
+
+查看所有远程引用：git ls-remote 
+查看所有远程引用的详细信息：git remote show （remote name）
+
+远程跟踪分支：
+远程跟踪分支是远程分支状态的引用，无法像移动本地分支一样来移动这些远程跟踪分支，虽然这些分支也存在与本地
+远程跟踪分支的移动，是由网络通讯时触发的（远程操作）
+远程跟踪分支长这样：remote/branch   远程引用名/本地分支名
+
+clone命令
+git clone git@url
+执行上述命令时，本地创建一个别名，用来指代url，同时创建一个名为origin/master的远程跟踪分支，最后在本地创建一个和远程分支一模一样的
+master分支
+      注：可使用 git clone git@url -o remote_name ，来把url重命名为remote_name，而不是原始的origin，这样的远程跟踪分支也会
+         跟着变名字
+      注：因为远程跟踪分支我们本地是操纵不了的，所以没必要知道他在哪，以及怎么用
+      
+
+注意：   clone命令无法指定clone哪一个分支，只会一次性把所有分支都clone下来，这才是一个完整的工程
+         这也很好理解，因为分支是指针，数据是快照，这些东西是一个整体，互相配合才能还原出工作目录，因此不可分割开来
+
+罗列所有分支（本地 & 远程）：git branch -a
+git fetch origin ， 这个命令查找origin属于是哪个remote的别名，然后从其中抓取本地没有的数据，并且更新本地数据库，然后！然后！移动
+远程跟踪分支到新的，更新后的位置
+
+
+git push （remote name） （branch）   :   推送本地分支到远端，因为有远程跟踪分支的存在，所以只需要指明remote name即可，不需要指明
+                                          远程服务器的哪个分支
+    注：上面命令是简化的，完整的是   git push （remote name）  （branch）：（remote branch）
+    
+    
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+书签：下一次其他协作者从服务器上抓取数据时，他们会在本地生成一个远程分支 origin/serverfix，指向服务器的 serverfix 分支的引用：
+    
+    
+                                          
+                                          
+
+
+                                           
