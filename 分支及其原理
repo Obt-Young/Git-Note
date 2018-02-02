@@ -10,6 +10,10 @@ HEAD分支（指针）：指向当前分支（指针）的commit点，即当前�
 git checkout -b xxx ： 创建分支（指针）xxx，同时切换到xxx上去
   （以上等同于：git branch xxx ； git checkout xxx）
   
+ ——————
+git checkout -b <branch>  <remote>/<branch>  ： 创建branch，切换到branch上，同时让branch跟踪<remote>的<branch>分支
+git checkout --track <remote>/<branch>       ： 设置当前分支跟踪remote的branch分支
+ ——————
 
 git merge yyy ： 把当前分支合并 “到”  yyy分支上，加入当前分支是xxx，那么就相当于给xxx赋值为yyy，xxx=yyy
             注：分支的合并，必须建立在commit的可访问前提下。不应当出现分支合并后，无法访问之前可访问的commit
@@ -56,11 +60,23 @@ git push （remote name） （branch）   :   推送本地分支到远端，因�
     
     
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-书签：下一次其他协作者从服务器上抓取数据时，他们会在本地生成一个远程分支 origin/serverfix，指向服务器的 serverfix 分支的引用：
-    
-    
-                                          
-                                          
 
+git fetch ： 从跟踪的远程分支上拿commit
+git merge ： 合并分支，把指针移动到指定的commit上；如果需要，还会创建新的commit来兼容前面的多个分支
+git pull  ： 从跟踪的远程分支上拿commit，并且合并到远程分支的当前commit点
+git remote -va ： 查看所有branch（本地&远程仓库），其中会包含本地 & 远程分支的当前指向的commit点（也就是HEAD指向哪）
+
+####创建、更改本地分支与远程分支的对应关系
+git checkout -b <branch>  <remote>/<branch>  ： 创建branch，切换到branch上，同时让branch跟踪<remote>的<branch>分支
+git checkout --track <remote>/<branch>       ： 同上
+git branch --set-upstream-to <remote>/<branch>  ： 指定本地当前branch，跟踪remote的branch
+
+#####查看本地分支与远程分支的对应关系
+git remote show <remote>      ： 查看指定remote的所有分支情况（其中包括本地分支与远程分支的对应关系）
+git branch -vv      ： 查看本地分支对应远程分支的情况（涵盖上一条命令的部分功能）
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+这里可以看到 iss53 分支正在跟踪 origin/iss53 并且 “ahead” 是 2，意味着本地有两个提交还没有推送到服务器上。 
 
                                            
