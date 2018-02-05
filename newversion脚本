@@ -1,0 +1,119 @@
+#!/bin/sh
+
+set -x 
+
+VERSION=3
+PATCHLEVEL=10
+SUBLEVEL=0
+RHEL_MAJOR=7
+RHEL_MINOR=1
+RHEL_RELEASE=229.20.1
+EULER_MAJOR=2
+EULER_MINOR=1
+RC=
+RC_VERSION=
+MINOR=
+
+TAG_OPT=
+
+usage()
+{
+	echo "Usage: `basename $0` [-f] [-h] [-M] [-m] [-r]"
+	echo "			-f	Add '-f' opts to git tag"
+	echo "			-h	Show this help message"
+	echo "			-M	major version number"
+	echo "			-m	minor version number"
+	echo "			-r	rc version number"
+	exit 1
+}
+
+while getopts "fhrMm" arg
+do
+	case $arg in
+		f)
+			TAG_OPT="-f"
+			;;
+		h)
+			usage
+			;;
+		r)
+			RC=1
+			;;
+		M)
+			MAJOR=1
+			;;
+		m)
+			MINOR=1
+			;;
+		?)
+			usage
+			;;
+	esac
+done
+MAJOR=1
+
+
+# clean up
+#git stash
+#git reset --hard HEAD
+
+RC_RELEASE=`grep "^CONFIG_LOCALVERSION." configs/kernel-3.10.0-x86_64.config |grep rc |cut -d "." -f5 |cut -d "c" -f2`
+
+[[ -n "$RC" ]] && [[ -z "$RC_RELEASE" ]] && RC_RELEASE=0
+
+RHEL_RELEASE=`grep ^RHEL_RELEASE Makefile |awk '{print $3}'`
+EULER_RELEASE_OLD=`grep ^EULER_RELEASE Makefile |awk '{print $3}'`
+
+if [[ "$EULER_RELEASE_OLD" =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then
+	EULER_RELEASE_MAJOR=`grep ^EULER_RELEASE Makefile |awk '{print $3}'|cut -d "." -f1`
+	EULER_RELEASE_MINOR=`grep ^EULER_RELEASE Makefile |awk '{print $3}'|cut -d "." -f2`
+elif [[ "$EULER_RELEASE_OLD" =~ ^[[:digit:]]+$ ]]; then
+	EULER_RELEASE_MAJOR=`grep ^EULER_RELEASE Makefile |awk '{print $3}'`
+	EULER_RELEASE_MINOR=""
+else
+	echo "Unknown old euler release: $EULER_RELEASE_OLD"
+	exit 1
+fi
+
+[[ "$MINOR" ]] && {
+	[[ "$EULER_RELEASE_MINOR" ]] || {
+		echo "No minor in this version of kernel"
+		exit 1
+	}
+	((EULER_RELEASE_MINOR++))
+}
+
+
+[[ "$MAJOR" ]] && {
+	((EULER_RELEASE_MAJOR++))
+	[[ "$EULER_RELEASE_MINOR" ]] && EULER_RELEASE_MINOR=1
+}
+
+[[ "$RC" ]] && {
+	((RC_RELEASE=$RC_RELEASE+1))
+	RC_VERSION=.rc$RC_RELEASE
+}
+
+EULER_RELEASE="$EULER_RELEASE_MAJOR"
+[[ "$EULER_RELEASE_MINOR" ]] && EULER_RELEASE+=".$EULER_RELEASE_MINOR"
+
+if [ "$(git branch | grep "^*.*hulk-7.1.x")" ];
+then
+	HULK=.hulk
+else
+	HULK=
+fi
+
+
+# 229.20.1.30
+RELEASE=$RHEL_RELEASE.$EULER_RELEASE$RC_VERSION
+DEBUG=debug
+ARCH=x86_64
+
+sed -i "s/^CONFIG_LOCALVERSION.*/CONFIG_LOCALVERSION=\"-$RELEASE$HULK.$ARCH\"/g" redhat/configs/*x86_64.config
+sed -i "s/^CONFIG_LOCALVERSION.*/CONFIG_LOCALVERSION=\"-$RELEASE$HULK.$ARCH.$DEBUG\"/g" redhat/configs/*-debug.config
+
+sed -i "s/^EULER_RELEASE.*/EULER_RELEASE = $EULER_RELEASE/g" Makefile
+
+git commit -a -s -m "linux-3.10.0-$RELEASE$HULK"
+git tag -a "linux-3.10.0-$RELEASE$HULK" -m "linux-3.10.0-$RELEASE$HULK" $TAG_OPT
