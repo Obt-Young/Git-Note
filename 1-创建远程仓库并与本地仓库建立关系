@@ -14,3 +14,6 @@ ssh-keygen -t rsa -C "邮箱地址" -b 4096
   mkdir kernel-with-tipc
   cd kernel-with-tipc
   git init
+
+6.查看某个commit属于那个tag的管理范围
+git name-rev ec13b1d6f0a0457312e615335ce8ceb07da50a11
