@@ -1,0 +1,7 @@
+生成
+git diff 1.c.old 1.c.new > 1.patch    //通用的patch
+git format-patch <remote>/<branch>    //git专用的patch
+
+应用
+git apply xxx.patch                   //接受通用patch
+git am xxx.patch                      //只接受git格式的patch
