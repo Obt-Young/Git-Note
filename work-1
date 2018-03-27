@@ -1,0 +1,87 @@
+4.5 将源码推送至远程仓库
+此处的远程仓库指自己的远程仓库，与Hulk和Euler仓库无关。
+4.5.1 推送到远程redhat-7.1.x-next分支
+1.	确保当前已在redhat-7.1.x-next分支
+git checkout redhat-7.1.x-next
+2.	推送至远程redhat-7.1.x-next分支
+git push yangkun redhat-7.1.x-next linux-3.10.0-229.49.1.xx2
+其中，linux-3.10.0-229.49.1.xx2为tag号。
+4.5.2 推送到远程redhat-7.1.x分支
+1.	切换到redhat-7.1.x分支
+git checkout redhat-7.1.x
+2.	merge redhat-7.1.x-next分支
+git merge redhat-7.1.x-next
+3.	推送到远程redhat-7.1.x分支
+git push yangkun redhat-7.1.x linux-3.10.0-229.49.1.xx2
+4.	切回redhat-7.1.x-next
+git checkout redhat-7.1.x-next
+5. 构建补丁新版本
+5.1 构建补丁
+linux仓库的redhat-7.1.x-next分支的commit号（以linux-3.10.0-229.49.1.152为例），
+151至152版本之间的patch为本次版本合入的补丁。
+941b036 linux-3.10.0-229.49.1.152
+3207d70 packet: in packet_do_bind, test fanout with bind_lock held
+88c8c42 packet: race condition in packet_bind
+fec5913 packet: missing dev_put() in packet_do_bind()
+ce9953c packet: hold bind lock when rebinding to fanout hook
+0356ddc ALSA: seq: Fix use-after-free at creating a port
+b0d3095 linux-3.10.0-229.49.1.151
+
+1.	保证SOURCE仓库在redhat-7.1.x-next分支。（SOURCE目录）
+git checkout redhat-7.1.x-next
+
+2.	修改series.conf
+在文件最后添加要增加patch的注释说明
+（在下一步的apply-patches的时候会自动填补剩下的内容）
+
+3.	构建补丁，左开右闭。（euleros-kernel-tools）
+./apply-patches --dir bugfix --current --branch redhat-7.1.x-next --pick b0d3095..3207d70 -p
+
+4.	修改changelog
+vim kernel.spec
+查找changelog的位置，增加内容
+5.2 构建PATCH新版本
+本章节剩下的命令都在SOURCE目录下
+./newversion
+5.3 将PATCH推送至远程仓库
+此处的远程仓库指自己的远程仓库，与Hulk和Euler仓库无关。
+5.3.1 推送至远程redhat-7.1.x-next分支
+假设linux-3.10.0-229.49.1.xx2为新版本
+1.	确保当前已在redhat-7.1.x-next分支
+git checkout redhat-7.1.x-next
+2.	推送至远程redhat-7.1.x-next分支
+git push yangkun redhat-7.1.x-next linux-3.10.0-229.49.1.xx2
+其中，linux-3.10.0-229.49.1.xx2为tag号
+5.3.2 推送至远程redhat-7.1.x分支
+1.	切换到redhat-7.1.x分支
+git checkout redhat-7.1.x
+2.	merge redhat-7.1.x-next分支
+git merge redhat-7.1.x-next
+3.	推送到远程redhat-7.1.x分支
+git push yangkun redhat-7.1.x linux-3.10.0-229.49.1.xx2
+4.	切回redhat-7.1.x-next
+git checkout  redhat-7.1.x-next
+
+5.3.3 推送至远程redhat-7.1.x-euler分支
+redhat-7.1.x-next在152版本合入了5个补丁，加上1个版本commit，共6个
+2ad7286 linux-3.10.0-229.49.1.152
+5f19db7 packet: in packet_do_bind, test fanout with bind_lock held
+ba3c9ed packet: race condition in packet_bind
+0296818 packet: missing dev_put() in packet_do_bind()
+7e2270c packet: hold bind lock when rebinding to fanout hook
+862026f ALSA: seq: Fix use-after-free at creating a port
+d85ce83 linux-3.10.0-229.49.1.151
+
+1.	生成补丁文件，确认一下生成的补丁，是否是本次版本需要合入的补丁。
+git format-patch -6
+	注：6为包括版本commit
+2.	切换到redhat-7.1.x-euler分支，
+git checkout redhat-7.1.x-euler
+3.	获取Euler最新的代码
+git pull
+4.	打上刚刚生成的补丁，使用如下命令，确定SOURCE目录下没有其他patch文件
+git am 00*patch
+5.	推送到远程redhat-7.1.x-euler分支
+git push yangkun redhat-7.1.x-euler linux-3.0.0-229.49.1.xx2
+6.	切回redhat-7.1.x-next
+git checkout redhat-7.1.x-next
