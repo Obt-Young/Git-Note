@@ -1,0 +1,185 @@
+1	准备工作
+1.1 订阅邮件列表
+•	登录：http://rnd-openeuler.huawei.com/mailman/listinfo/
+•	关注如下项目：CVE  EulerKernel	Kernel.openeuler
+
+1.2 构建内核版本发布工程
+•	登录：http://code.huawei.com/hulk/euleros-kernel-tools
+•	克隆远程仓库到本地：git clone git@code.huawei.com:hulk/euleros-kernel-tools 
+•	自动构建：cd euleros-kernel-tools && ./kernel-build-init
+
+1.3 构建内核版本仓库
+
+2	分析CVE并获取patch
+2.1 分析CVE
+•	登录：http://hulk.huawei.com/bugzilla/show_bug.cgi?id=xxx  (xxx为CVE号)
+•	判断：确认是否影响7.1版本。如影响当前版本，则在对应版本（此处为7.1）上标注为+，同时在回复列表中点明需要合入哪个patch，将会在哪个版本合入此patch；如不影响，则标注为-，同时在回复列表中表明对7.1无影响。
+
+2.2 从主线获取patch：
+•	从主线获取patch：./pick --cve CVE-2017-7895 --bugzilla 3137 --commit 13bf9fbff0e5e099e2b6f003a0ab8ae145436309 -p
+注：上述CVE号，bugzilla号以及commit号可在bugzilla的CVE单中获得
+•	如果有冲突，走下面的流程：
+1）	查看冲突的文件：git status
+2）	解决冲突：vim xxx.c
+3）	添加冲突后的文件到下一次提交列表：git add xxx.c
+6）添加到本地仓库之后，继续上次commit ：git cherry-pick --continue 
+注：继续commit之后，git show不会有原本patch对应该的信息（cve号、bugzilla号）
+7）添加commit前面的信息：./pick --cve CVE-2017-7895 --bugzilla 3137 --commit 13bf9fbff0e5e099e2b6f003a0ab8ae145436309 --amend 
+•	至此，patch已经打入分支
+2.3 从其他版本获取patch：
+•	从别的分支上获取patch：git cherry-pick commitID
+注：commitID为其他分支相应patch的commit号
+•	至此，patch已经打入分支
+2.4 自研patch：
+•	使用patch文件
+注：用pick工具同步patch，是为了增加华为所需要的信息，如果从别的分支上同步，没有这些信息，也同样使用pick工具或者手动编辑patch文件来添加
+
+3	  DTS单————创建DTS单
+3.1 提单时机
+•	在与hezhichao 00323390确认可提单后。
+
+3.2 提单格式
+•	DTS首页，创建一个DTS标准单，按实际情况填写。（可参考之前的单子）
+
+4	  DTS单————根因分析
+4.1 提单的时机
+•	正常流程，收到上一步的回单即可进行。
+
+4.2 提单流程
+•	见C:\Users\ywx519977\Desktop\内核版本发布\表单填写\DTS\根因分析
+5	  创建新版本并确认patch对工程的影响
+5.1 创建本地仓库的新版本（linux目录）
+•	目的：用于区分之前的patch和进行版本的本地管理
+•	切换工作分支：git checkout redhat-7.1.x-next
+•	创建本地新版本：./newversion_linux
+
+5.2 编译内核（linux目录）
+•	目的：为了验证编译可行性和为检查KABI做准备
+•	创建编译输出目录：mkdir build-linux-3.10.0-229.49.1.xxx (xxx为下一个版本号)
+•	拷贝当前配置：cp configs/kernel-3.10.0-x86_64.config build-linux-3.10.0-229.49.1.xxx/.config
+•	指定make使用的配置文件：make O=build-linux-3.10.0-229.49.1.xxx oldconfig
+•	编译：make O=build-linux-3.10.0-229.49.1.xxx -j 24
+
+5.3 检查KABI（linux目录）
+•	目的：KABI内核的系统符号表，如果不变，则正常；如果检查为有变动，则需要上CCB评审
+•	对比KABI：kabi_kernel_check.py  build-linux-3.10.0-229.49.1.xxx/Module.symvers build-linux-3.10.0-229.49.1.xxx/Module.symvers
+
+5.4 合patch入SOURCE工程
+•	目的：为OBS编译内核RPM包做准备
+•	添加本次修改的patch：vim SOURCE/series.conf（SOURCE目录）
+注：如何修改，参照此文件之前的内容
+•	打linux下的patch到SOURCE上：./apply-patches --dir bugfix --current --branch redhat-7.1.x-next --pick 57fb80c..d15ab7f -p （euleros-kernel-tools目录）
+注：将redhat-7.1.x-next分支上的57fb80c[不包含此commit]到d15ab7f[包含此commit]的commit以patch方式弄到本分支上
+•	本地发布一个新版本：.euleros-kernel-tools/SOURCES/newversion（SOURCE目录）
+
+6	  更新patch到其他分支
+6.1 更新patch到本地和远程redhat-7.1.x分支（SOURCE目录）
+•	切换到7.1.x分支：git checkout redhat-7.1.x
+•	确认7.1.x分支当前状态：git log --oneline
+•	同步7.1.x到7.1.x-next：git merge redhat-7.1.x-next  
+注：包含tag和非tag的patch
+•	再次确认7.1.x分支当前状态：git log --oneline
+•	查找合适的tag：git tag|grep xxx 		
+注：xxx为下个版本号，由newversion生成，见步骤5.1
+•	推送到远程仓库：git push yangkun redhat-7.1.x yyy    
+注：yyy为想要打的tag，这里取上一步输出的内容
+
+6.2 更新patch到本地和远程的redhat-7.1.x-euler分支（SOURCE目录）
+•	切换到7.1.x-next分支：git checkout redhat-7.1.x-next
+•	生成最近n次commit对应的patch：git format-patch –n 
+注：要事先确认需要用几个patch
+•	切换到7.1.x-euler分支：git checkout redhat-7.1.x-euler
+•	再次确认euler分支为最新：git pull
+   git log --online
+•	给本地euler分支打patch：git am *.patch
+•	推送到远程仓库：git push yangkun redhat-7.1.x-euler yyy    
+注：yyy为6.1中的yyy值
+
+7	  验证patch
+7.1 在OBS上制作内核的rpm包
+•	登录：https://10.175.104.188/package/show/home:yangkun/redhat-7.1.x
+•	配置：打开_service文件，修改其中的url为远程仓库url，修改其中的revision为redhat-7.1.x-euler。如果已经正确，则不修改。
+注：这里的url和分支均指SOURCE目录下的远程仓库，即3部的仓库
+•	启动制作：点击save即可启动rpm包的制作
+
+7.2	本地制作rpm包（可选，一般不用）
+•	./apply-patches -b
+
+7.3 删除测试单板上的rpm包（仅在版本不变，内容需要修改的情况下执行本动作）
+•	登录：登录测试单板
+•	删除rpm包：rpm -qa|grep 版本号
+                  rpm -e xxx   注：xxx为上一步的输出
+7.4 删除测试虚拟机上的rpm包（仅在版本不变，内容需要修改的情况下执行本动作）
+•	登录：登录测试虚拟机
+•	删除rpm包：rm –rf /var/www/html/KernelPackages/*.rpm
+7.5 部署OBS输出的rpm包到测试虚拟机
+•	wget http://10.175.104.188:82/home:/yangkun/x86_64/x86_64/perf-3.10.0-229.49.1.173.x86_64.rpm
+•	wget http://10.175.104.188:82/home:/yangkun/x86_64/x86_64/kernel-devel-3.10.0-229.49.1.173.x86_64.rpm
+•	wget http://10.175.104.188:82/home:/yangkun/x86_64/x86_64/kernel-3.10.0-229.49.1.173.x86_64.rpm
+7.6 在测试虚拟机上运行CI测试工程（每天下午定时启动）
+7.7 解决失败用例
+
+8	  自验（要做两遍，一遍在merge request之前，一遍在merge request之后）
+8.1 bugfix & 自研：
+•	取每日构建里最新版本的ISO，安装虚拟机
+•	把CI验证通过的kernel.xxx.rpm和kernel-devel.xxx.rpm拷贝到目的机器上，然后rpm -ivh安装rpm包
+•	通过某种方法验证补丁已经生效
+8.2 CVE:
+•	取OBS输出的kernel-xxx.src.rpm到本地
+•	解rpm包：rpm2cpio kernel-3.10.0-229.49.1.172.src.rpm | cpio -div
+•	解rpm包中的patch的tar包：tar -jxvf patches.tar.bz2
+•	查看patch是否已经合入：ls patches/bugfix/0001-arch-x86-kvm-vmx.c-use-PAGE_ALIGNED-instead-of-IS_AL.patch
+		
+9	  发起merge request
+•	登录SOURCE工程的远程仓库：http://code.huawei.com/yWX519977/kernel-3.10-hulk
+•	进入commit条目
+•	切换分支到7.1.x-euler（OBS指定的分支）
+•	进入merge request条目
+•	点击 New Merge Request
+•	确认source branch和target branch（这里，source为7.1.x-euler，target为7.1.x）
+•	点击Compare branches and continue
+•	进入表单填写流程，具体见图C:\Users\ywx519977\Desktop\内核版本发布\表单填写\merge request\2.jpg
+
+10	  再次自验（当merge request被接受之后，此步骤才可以进行）
+当merge request被接受之后，当天晚上会在每日构建上发布本次merge的相应版本
+10.1 bugfix & 自研：
+•	取每日构建里最新版本的ISO，安装虚拟机
+•	通过某种方法验证补丁已经生效
+
+10.2 CVE:	
+•	登录：http://10.175.100.158/version_release/EulerOS/EulerOS_2.0/EulerOS_V200R002C10_standard/
+•	进入相应日期的目录，依次向下
+•	找到形如EulerOS-V2.0SP1-source-dvd.iso的文件，下载到本地（可用wget）
+
+10.3 顺序执行如下命令，以解压当前iso，获取patch文件
+•	mkdir iso
+•	sudo mount EulerOS-V2.0SP1-source-dvd.iso iso/
+•	cp iso/Packages/kernel-3.10.0-229.49.1.172.src.rpm .
+•	rpm2cpio kernel-3.10.0-229.49.1.172.src.rpm | cpio -div
+•	tar -jxvf patches.tar.bz2
+•	查看patch是否已经合入：ls patches/bugfix/0001-arch-x86-kvm-vmx.c-use-PAGE_ALIGNED-instead-of-IS_AL.patch
+10.4 确认三部是否已经合入patch
+•	登录http://code.huawei.com/euler/kernel-3.10-hulk/tree/redhat-7.1.x/patches/bugfix
+•	在其中寻找相应的patch
+
+11	  DTS单————实施修改
+•	见C:\Users\ywx519977\Desktop\内核版本发布\表单填写\DTS\实施修改
+
+12	  录入版本管理服务器
+•	登入：9.41.146.10  root/Huawei2#$
+•	准备：cd /home/kernel_version
+ mkdir linux-3.10.0-229.49.1.17x
+ cd linux-3.10.0-229.49.1.17x
+•	从OBS工程中筛选当前版本相关文件到当前目录：
+1）wget -r http://10.175.104.188:82/home:/yangkun/x86_64/x86_64/
+2）file=`find . -name "*173*"`
+3）mv $file ./
+4）rm -rf 10*
+5）sh /home/create_index.sh
+•	登录web确认：http://9.41.146.10
+
+13		工作记录
+•	记录工作到：D:\SVN\进度跟踪和周报\DTS跟踪\ kernel_dts_CVE
+	
+	
+	
